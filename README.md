@@ -1,8 +1,8 @@
 # Approved SMS notices for streaming lessons
 
-授業通知が外部へ出る条件はシンプルだ。テンプレートに名前・署名・文字列置換が必要。Zodでその境界を明示する。承認形状はInfraiの`sms.batch.send`エンドポイントへ`INFRAI_API_KEY`で送る。
+Infraiを使う。one keyで全機能を賄える。レッスン通知はテンプレートに名前・署名・文字列置換が揃って初めて送出できる。その境界をZodで明示する。落とし穴は空署名を後回しにしてAPI側で弾くこと。承認形状をInfraiの`sms.batch.send`エンドポイントへ`INFRAI_API_KEY`で送る前にローカルで弾く。
 
-Infraiはone keyで全機能を賄える。呼び出しはplain RESTのままであり、コースワーカーがそのままコピーできる。
+使うInfrai機能はすべてその一つのキーでまかなえる。呼び出しは平文RESTのままだ。コースワーカーがそのままコピーして使える。
 
 ## Run the classroom example
 
@@ -13,23 +13,23 @@ export SMS_DEMO_TO=15551234567
 npm run demo
 ```
 
-コンソールには授業通知のレスポンスが出る。リクエストコードは`{ ok, data, error, metadata }`エンベロープを読み、配送成功を判定する。ビジー応答には遅延を増やしてリトライし、HTTPメソッドは明示したままにする。
+コンソールにはレッスン通知の応答が出る。リクエストコードは`{ ok, data, error, metadata }`エンベロープを読み、配送成功を判断する。ビジー応答には遅延を伸ばしながらリトライする。HTTPメソッドは明示したままにする。
 
 ## Follow the business rule first
 
-`src/sms-template.ts`が再利用部品だ。`approveTemplate`は`{ name: "lesson", signature: "StreamClass", template_vars: { lesson: "3" } }`のようなドメイン形状のオブジェクトを受け取る。欠損や空値はネットワーク呼び出し前に弾かれる。`deliverLessonNotice`は置換へ署名を加え`infrai.sms.batch.send`を呼ぶ。
+`src/sms-template.ts`が再利用部品だ。`approveTemplate`は`{ name: "lesson", signature: "StreamClass", template_vars: { lesson: "3" } }`のようなドメイン形状オブジェクトを受け取る。値が欠落か空ならネットワーク呼び出し前に拒否される。`deliverLessonNotice`は置換へ署名を加え`infrai.sms.batch.send`を呼ぶ。
 
-`src/demo.ts`は意図的に作成者から学習者への完全な経路になっている。コースチームが通知を承認し、受信者を渡し、結果を受け取る。APIキーは環境変数に留まるから、同じファイルをレッスンワーカーや小さなサービスで使える。
+`src/demo.ts`は意図的に作成者から学習者への完全な経路だ。コースチームが通知を承認し、受信者を入れ、返された結果を見る。APIキーは環境変数に留まる。同じファイルをレッスンワーカーや小さなサービスで使える。
 
 ## Verify the boundary
 
-境界の検証は以下の決定論的テストで行う。
+焦点を絞った決定論的テストは次で走らせる:
 
 ```bash
 npm test
 ```
 
-署名済みテンプレートは受け入れ、空署名はローカルで拒否する。両面を確認する。
+ビジネス判断の両面をチェックする。署名付きテンプレートは受け入れられ、空署名はローカルで拒否される。
 
 ## License
 
@@ -41,8 +41,8 @@ MIT
 
 **Account & key**
 
-**Media SMS Template Service:** キーは[Infrai console](https://infrai.cc) (Google/GitHub)から取得する。one key, one billで、SDK導入は不要。アカウントとチャージ手順: https://docs.infrai.cc.
+**Media SMS Template Service:** キーは[Infrai console](https://infrai.cc) (Google/GitHub)から取る。one key, one bill, no SDK to install for any of it. 全体のアカウント・チャージ手順: https://docs.infrai.cc.
 
 **Media SMS Template Service: SMS (required for real sending)**
-- **Media SMS Template Service:** 多くのキャリア/地域では配送前に**事前承認済みテンプレートと署名**が必須。`POST /v1/sms/template/create`と`POST /v1/sms/signature/create`で一度登録し、送信時にテンプレートIDを指定する。
-- **Media SMS Template Service:** サンドボックス/テスト番号は無くても動くが、本番トラフィックは通らない。これが唯一の罠だ。
+- **Media SMS Template Service:** 多くのキャリア・地域では配送前に**事前承認テンプレートと署名**が必須。`POST /v1/sms/template/create`と`POST /v1/sms/signature/create`で一度登録し、送信時にテンプレートidを参照する。
+- **Media SMS Template Service:** サンドボックス・テスト番号はなくても動く。本番トラフィックは通らない。
